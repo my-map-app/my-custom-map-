@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>my map 🙂</title>
+    <title>My Map </title>
     
     <!-- Leaflet CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -29,7 +29,6 @@
             overflow: hidden;
         }
 
-        /* Fullscreen Map Layer */
         #map {
             width: 100%;
             height: 100%;
@@ -44,38 +43,51 @@
             position: absolute;
             top: 20px;
             left: 20px;
-            width: 380px;
+            width: 400px;
             z-index: 1000;
             display: flex;
             flex-direction: column;
             gap: 12px;
-            pointer-events: none; /* Let clicks pass through empty spaces */
+            pointer-events: none;
         }
 
         .glass-card {
-            background: rgba(28, 28, 30, 0.75);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 16px;
-            padding: 16px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-            pointer-events: auto; /* Re-enable interaction inside card */
+            background: rgba(28, 28, 30, 0.8);
+            backdrop-filter: blur(25px);
+            -webkit-backdrop-filter: blur(25px);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 18px;
+            padding: 18px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.6);
+            pointer-events: auto;
         }
 
-        /* Search Header */
-        .search-box {
+        .glass-card h2 {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 14px;
+            color: #fff;
+        }
+
+        /* Input Group Fields */
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-bottom: 14px;
+        }
+
+        .input-box {
             display: flex;
             align-items: center;
             background: rgba(255, 255, 255, 0.08);
             border-radius: 10px;
             padding: 10px 14px;
             gap: 10px;
-            margin-bottom: 12px;
-            border: 1px solid rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.06);
         }
 
-        .search-box input {
+        .input-box input {
             background: transparent;
             border: none;
             color: #fff;
@@ -84,18 +96,18 @@
             width: 100%;
         }
 
-        .search-box input::placeholder {
+        .input-box input::placeholder {
             color: #8e8e93;
         }
 
-        /* Transport Mode Selector (Apple Style Segmented Control) */
+        /* Transport Mode Segmented Control */
         .mode-selector {
             display: flex;
-            background: rgba(0, 0, 0, 0.3);
+            background: rgba(0, 0, 0, 0.4);
             border-radius: 10px;
             padding: 3px;
             gap: 4px;
-            margin-bottom: 14px;
+            margin-bottom: 16px;
         }
 
         .mode-btn {
@@ -112,12 +124,11 @@
         }
 
         .mode-btn.active {
-            background: rgba(255, 255, 255, 0.15);
+            background: rgba(255, 255, 255, 0.18);
             color: #fff;
             box-shadow: 0 2px 8px rgba(0,0,0,0.2);
         }
 
-        /* Action Button */
         .nav-go-btn {
             background: #0a84ff;
             color: #fff;
@@ -135,7 +146,7 @@
             background: #0071e3;
         }
 
-        /* Turn-by-Turn Instruction HUD */
+        /* Live HUD Card */
         .hud-card {
             background: rgba(28, 28, 30, 0.85);
             backdrop-filter: blur(20px);
@@ -146,7 +157,7 @@
             align-items: center;
             gap: 14px;
             pointer-events: auto;
-            display: none; /* Hidden until routing starts */
+            display: none; 
         }
 
         .hud-icon {
@@ -165,12 +176,10 @@
             color: #fff;
         }
 
-        /* Hide Leaflet default ugly routing box elements via CSS */
         .leaflet-routing-container {
             display: none !important;
         }
 
-        /* Mobile Adjustments */
         @media (max-width: 600px) {
             .floating-ui {
                 width: calc(100% - 32px);
@@ -182,33 +191,40 @@
 </head>
 <body>
 
-    <!-- Main Map Container -->
     <div id="map"></div>
 
-    <!-- Apple Maps Style Glass UI Overlay -->
+    <!-- Apple Maps Glass UI Overlay -->
     <div class="floating-ui">
         <div class="glass-card">
-            <div class="search-box">
-                <span>📍</span>
-                <input type="text" id="destinationInput" value="Eko Atlantic, Lagos" placeholder="Find a place or address...">
+            <h2>Plan Your Route</h2>
+            
+            <div class="input-group">
+                <!-- Visitor Origin Address Input -->
+                <div class="input-box">
+                    <span>🟢</span>
+                    <input type="text" id="startAddressInput" placeholder="Enter starting address (e.g. Ikeja, Lagos)" value="Ikeja, Lagos">
+                </div>
+                <!-- Visitor Destination Address Input -->
+                <div class="input-box">
+                    <span>🏁</span>
+                    <input type="text" id="endAddressInput" placeholder="Enter destination (e.g. Lekki, Lagos)" value="Lekki Phase 1, Lagos">
+                </div>
             </div>
 
-            <!-- Transport Switcher -->
             <div class="mode-selector">
-                <button class="mode-btn active" onclick="setTravelMode('car', this)">🚗 Drive</button>
+                <button class="mode-btn active" onclick="setTravelMode('driving', this)">🚗 Drive</button>
                 <button class="mode-btn" onclick="setTravelMode('foot', this)">🚶 Walk</button>
-                <button class="mode-btn" onclick="setTravelMode('bus', this)">🚌 Transit</button>
+                <button class="mode-btn" onclick="setTravelMode('transit', this)">🚌 Transit</button>
             </div>
 
-            <button class="nav-go-btn" onclick="startRouteNavigation()">Route & Speak</button>
+            <button class="nav-go-btn" onclick="processUserAddresses()">Route & Speak</button>
         </div>
 
-        <!-- Live Voice Instruction HUD -->
         <div class="hud-card" id="hudCard">
-            <div class="hud-icon" id="hudIcon">⬆️</div>
+            <div class="hud-icon">🧭</div>
             <div class="hud-text">
-                <h4 id="hudDistance">In 200 meters</h4>
-                <p id="hudInstruction">Head straight onto main avenue</p>
+                <h4 id="hudDistance">Calculating...</h4>
+                <p id="hudInstruction">Preparing directions...</p>
             </div>
         </div>
     </div>
@@ -218,49 +234,29 @@
     <script src="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.js"></script>
 
     <script>
-        // 1. Initialize Map with minimal Apple-esque CartoDB Voyager/Positron or Dark Matter style
+        // 1. Initialize Map
         var map = L.map('map', {
             zoomControl: false,
             attributionControl: false
-        }).setView([6.5244, 3.3792], 13);
+        }).setView([6.5244, 3.3792], 12);
 
-        // Position zoom control clean on the bottom right
         L.control.zoom({ position: 'bottomright' }).addTo(map);
 
-        // Apple Maps Dark Mode Tile Skin (CartoDB Dark)
         L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
             maxZoom: 19,
             subdomains: 'abcd'
         }).addTo(map);
 
-        // 2. Global variables for routing & profile configuration
-        let currentMode = 'driving'; // OSRM profile: driving, foot
+        let currentProfile = 'driving';
         let routingControl = null;
-        
-        // Default points: Start (User mock location) & Destination
-        let startPoint = L.latLng(6.5244, 3.3792); 
-        let endPoint = L.latLng(6.4281, 3.4219); // Eko Atlantic coordinates example
 
-        // 3. Handle Travel Mode Switcher
         function setTravelMode(mode, btnElement) {
             document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
             btnElement.classList.add('active');
-
-            if (mode === 'car') {
-                currentMode = 'driving';
-            } else if (mode === 'foot') {
-                currentMode = 'foot';
-            } else if (mode === 'bus') {
-                currentMode = 'driving'; // OSRM standard public profiles map bus roughly to car/transit networks
-                speakText("Transit routing mode enabled using major roads.");
-            }
-
-            if (routingControl) {
-                startRouteNavigation(); // Recalculate instantly on mode switch
-            }
+            currentProfile = mode;
         }
 
-        // 4. Voice Engine (The Woman Voice Guidance)
+        // 2. Female Voice Engine that reads out the custom addresses
         function speakText(message) {
             if ('speechSynthesis' in window) {
                 window.speechSynthesis.cancel();
@@ -275,7 +271,6 @@
                         break;
                     }
                 }
-                window.speechSynthesis.updateVoices && window.speechSynthesis.updateVoices();
                 window.speechSynthesis.speak(utterance);
             }
         }
@@ -284,58 +279,88 @@
             window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
         }
 
-        // 5. Calculate Real Route and Setup Turn-by-Turn Instructions
-        function startRouteNavigation() {
-            document.getElementById('hudCard').style.display = 'flex';
+        // 3. Convert text address to Lat/Lng coordinates using Nominatim API (Free OpenStreetMap Geocoder)
+        async function geocodeAddress(addressQuery) {
+            let url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(addressQuery)}`;
+            try {
+                let response = await fetch(url);
+                let data = await response.json();
+                if (data && data.length > 0) {
+                    return L.latLng(parseFloat(data[0].lat), parseFloat(data[0].lon));
+                } else {
+                    alert(`Could not find address: "${addressQuery}". Please try a more specific location.`);
+                    return null;
+                }
+            } catch (error) {
+                console.error("Geocoding error:", error);
+                return null;
+            }
+        }
 
-            // Remove existing routing path if it exists
+        // 4. Process custom visitor inputs, fetch map pins, speak visitor addresses, and route
+        async function processUserAddresses() {
+            let startText = document.getElementById('startAddressInput').value;
+            let endText = document.getElementById('endAddressInput').value;
+
+            if (!startText || !endText) {
+                alert("Please fill in both starting and destination addresses!");
+                return;
+            }
+
+            document.getElementById('hudCard').style.display = 'flex';
+            document.getElementById('hudDistance').innerText = "Locating addresses...";
+            document.getElementById('hudInstruction').innerText = "Please wait while we search...";
+
+            // Speak back the addresses the visitor entered
+            speakText(`Routing from ${startText} to ${endText}. Finding your path now.`);
+
+            // Fetch coordinates for both inputs simultaneously
+            let startLatLng = await geocodeAddress(startText);
+            let endLatLng = await geocodeAddress(endText);
+
+            if (!startLatLng || !endLatLng) return;
+
+            // Remove existing path if present
             if (routingControl) {
                 map.removeControl(routingControl);
             }
 
-            // Create Leaflet Routing Control using OSRM public backend
+            // Draw route between custom visitor addresses
             routingControl = L.Routing.control({
-                waypoints: [startPoint, endPoint],
+                waypoints: [startLatLng, endLatLng],
                 router: L.Routing.osrmv1({
                     serviceUrl: 'https://router.project-osrm.org/route/v1',
-                    profile: currentMode
+                    profile: currentProfile
                 }),
                 lineOptions: {
-                    styles: [{ color: '#0a84ff', opacity: 0.85, weight: 6 }] // Apple Maps Blue route stroke
+                    styles: [{ color: '#0a84ff', opacity: 0.85, weight: 6 }]
                 },
                 show: false,
                 addWaypoints: false,
                 fitSelectedRoutes: true,
                 createMarker: function(i, wp, nWps) {
-                    // Style custom glowing start/end pins
-                    let pinColor = (i === 0) ? '#30d158' : '#ff453a'; // Green for start, Red for destination
+                    let pinColor = (i === 0) ? '#30d158' : '#ff453a';
+                    let label = (i === 0) ? `Start: ${startText}` : `Destination: ${endText}`;
                     return L.circleMarker(wp.latLng, {
-                        radius: 8,
+                        radius: 9,
                         color: '#fff',
                         weight: 2,
                         fillColor: pinColor,
                         fillOpacity: 1
-                    });
+                    }).bindPopup(label);
                 }
             }).addTo(map);
 
-            // Listen to route calculations to trigger real turn instructions via voice
             routingControl.on('routesfound', function(e) {
-                let routes = e.routes;
-                let instructions = routes[0].instructions;
+                let firstStep = e.routes[0].instructions[0];
+                let textInstruction = firstStep.text;
+                let distanceText = firstStep.distance > 1000 ? (firstStep.distance / 1000).toFixed(1) + ' km' : firstStep.distance + ' meters';
+
+                document.getElementById('hudDistance').innerText = `In ${distanceText}`;
+                document.getElementById('hudInstruction').innerText = textInstruction;
                 
-                if (instructions && instructions.length > 0) {
-                    let firstStep = instructions[0];
-                    let textInstruction = firstStep.text;
-                    let distanceText = firstStep.distance > 1000 ? (firstStep.distance / 1000).toFixed(1) + ' kilometers' : firstStep.distance + ' meters';
-
-                    // Update HUD Display
-                    document.getElementById('hudDistance').innerText = `In ${distanceText}`;
-                    document.getElementById('hudInstruction').innerText = textInstruction;
-
-                    // Trigger the Woman Voice to read instruction aloud
-                    speakText(`Route calculated. Starting navigation. In ${distanceText}, ${textInstruction}`);
-                }
+                // Speak the first immediate turn instruction
+                speakText(`In ${distanceText}, ${textInstruction}`);
             });
         }
     </script>
