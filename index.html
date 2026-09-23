@@ -3,12 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pro Interactive Map with Voice Navigation</title>
+    <title>my map 🙂</title>
     
     <!-- Leaflet CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <!-- Leaflet Routing Machine CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.css" />
     
-    <!-- Google Fonts -->
+    <!-- SF Pro / Inter Typography -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     
     <style>
@@ -19,212 +21,323 @@
         }
 
         body {
-            font-family: 'Inter', sans-serif;
-            background-color: #0f172a;
-            color: #f8fafc;
-            display: flex;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background-color: #000;
+            color: #f5f5f7;
             height: 100vh;
+            width: 100vw;
             overflow: hidden;
         }
 
-        /* Sidebar UI */
-        .sidebar {
+        /* Fullscreen Map Layer */
+        #map {
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 1;
+        }
+
+        /* Apple Maps Floating Glass UI Overlay */
+        .floating-ui {
+            position: absolute;
+            top: 20px;
+            left: 20px;
             width: 380px;
-            background: #1e293b;
-            border-right: 1px solid #334155;
-            display: flex;
-            flex-direction: column;
-            padding: 24px;
             z-index: 1000;
-            box-shadow: 4px 0 24px rgba(0,0,0,0.3);
-        }
-
-        .sidebar h1 {
-            font-size: 1.5rem;
-            font-weight: 700;
-            margin-bottom: 8px;
-            color: #38bdf8;
-        }
-
-        .sidebar p {
-            color: #94a3b8;
-            font-size: 0.9rem;
-            margin-bottom: 20px;
-        }
-
-        /* Direction Card with Image */
-        .direction-card {
-            background: #0f172a;
-            border: 1px solid #334155;
-            border-radius: 12px;
-            padding: 16px;
-            margin-bottom: 16px;
             display: flex;
             flex-direction: column;
             gap: 12px;
+            pointer-events: none; /* Let clicks pass through empty spaces */
         }
 
-        .direction-header {
+        .glass-card {
+            background: rgba(28, 28, 30, 0.75);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 16px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            pointer-events: auto; /* Re-enable interaction inside card */
+        }
+
+        /* Search Header */
+        .search-box {
             display: flex;
             align-items: center;
-            gap: 12px;
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 10px;
+            padding: 10px 14px;
+            gap: 10px;
+            margin-bottom: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
         }
 
-        .direction-img {
-            width: 60px;
-            height: 60px;
-            border-radius: 8px;
-            object-fit: cover;
-            border: 1px solid #38bdf8;
-        }
-
-        .direction-info h3 {
-            font-size: 1rem;
-            font-weight: 600;
-            color: #f8fafc;
-        }
-
-        .direction-info span {
-            font-size: 0.8rem;
-            color: #38bdf8;
-        }
-
-        .action-btn {
-            background: #38bdf8;
-            color: #0f172a;
+        .search-box input {
+            background: transparent;
             border: none;
-            padding: 10px 16px;
-            border-radius: 8px;
+            color: #fff;
+            font-size: 0.95rem;
+            outline: none;
+            width: 100%;
+        }
+
+        .search-box input::placeholder {
+            color: #8e8e93;
+        }
+
+        /* Transport Mode Selector (Apple Style Segmented Control) */
+        .mode-selector {
+            display: flex;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+            padding: 3px;
+            gap: 4px;
+            margin-bottom: 14px;
+        }
+
+        .mode-btn {
+            flex: 1;
+            background: transparent;
+            border: none;
+            color: #8e8e93;
+            padding: 8px;
+            font-size: 0.85rem;
             font-weight: 600;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .mode-btn.active {
+            background: rgba(255, 255, 255, 0.15);
+            color: #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
+
+        /* Action Button */
+        .nav-go-btn {
+            background: #0a84ff;
+            color: #fff;
+            border: none;
+            width: 100%;
+            padding: 12px;
+            border-radius: 10px;
+            font-weight: 600;
+            font-size: 0.95rem;
             cursor: pointer;
             transition: background 0.2s;
-            width: 100%;
-            margin-bottom: 8px;
         }
 
-        .action-btn:hover {
-            background: #0ea5e9;
+        .nav-go-btn:hover {
+            background: #0071e3;
         }
 
-        .secondary-btn {
-            background: #334155;
-            color: #f8fafc;
+        /* Turn-by-Turn Instruction HUD */
+        .hud-card {
+            background: rgba(28, 28, 30, 0.85);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 14px 18px;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            pointer-events: auto;
+            display: none; /* Hidden until routing starts */
         }
 
-        .secondary-btn:hover {
-            background: #475569;
+        .hud-icon {
+            font-size: 1.8rem;
         }
 
-        /* Map Container */
-        #map {
-            flex-grow: 1;
-            height: 100%;
-            background: #0f172a;
+        .hud-text h4 {
+            font-size: 0.85rem;
+            color: #8e8e93;
+            font-weight: 500;
         }
 
-        @media (max-width: 768px) {
-            body { flex-direction: column; }
-            .sidebar { width: 100%; height: 45vh; overflow-y: auto; }
-            #map { height: 55vh; }
+        .hud-text p {
+            font-size: 1.05rem;
+            font-weight: 600;
+            color: #fff;
+        }
+
+        /* Hide Leaflet default ugly routing box elements via CSS */
+        .leaflet-routing-container {
+            display: none !important;
+        }
+
+        /* Mobile Adjustments */
+        @media (max-width: 600px) {
+            .floating-ui {
+                width: calc(100% - 32px);
+                left: 16px;
+                top: 16px;
+            }
         }
     </style>
 </head>
 <body>
 
-    <!-- Sidebar Control Panel -->
-    <div class="sidebar">
-        <h1>GeoNav Voice Pro</h1>
-        <p>Interactive web map powered by HTML, CSS, Leaflet, and Web Speech API.</p>
+    <!-- Main Map Container -->
+    <div id="map"></div>
 
-        <!-- Direction Box with mini picture -->
-        <div class="direction-card">
-            <div class="direction-header">
-                <img src="https://images.unsplash.com/photo-1526778548025-fa2f459cd5c1?w=150" alt="Route preview" class="direction-img">
-                <div class="direction-info">
-                    <h3>HQ Destination</h3>
-                    <span>Voice Navigation Ready</span>
-                </div>
+    <!-- Apple Maps Style Glass UI Overlay -->
+    <div class="floating-ui">
+        <div class="glass-card">
+            <div class="search-box">
+                <span>📍</span>
+                <input type="text" id="destinationInput" value="Eko Atlantic, Lagos" placeholder="Find a place or address...">
             </div>
-            <button class="action-btn" onclick="triggerNavigation('nav')">Start Navigation</button>
-            <button class="action-btn secondary-btn" onclick="triggerNavigation('uturn')">Simulate U-Turn</button>
+
+            <!-- Transport Switcher -->
+            <div class="mode-selector">
+                <button class="mode-btn active" onclick="setTravelMode('car', this)">🚗 Drive</button>
+                <button class="mode-btn" onclick="setTravelMode('foot', this)">🚶 Walk</button>
+                <button class="mode-btn" onclick="setTravelMode('bus', this)">🚌 Transit</button>
+            </div>
+
+            <button class="nav-go-btn" onclick="startRouteNavigation()">Route & Speak</button>
         </div>
 
-        <div style="margin-top: auto; font-size: 0.75rem; color: #64748b; text-align: center;">
-            Voice synthesis active via browser engine
+        <!-- Live Voice Instruction HUD -->
+        <div class="hud-card" id="hudCard">
+            <div class="hud-icon" id="hudIcon">⬆️</div>
+            <div class="hud-text">
+                <h4 id="hudDistance">In 200 meters</h4>
+                <p id="hudInstruction">Head straight onto main avenue</p>
+            </div>
         </div>
     </div>
 
-    <!-- The Map Element -->
-    <div id="map"></div>
-
-    <!-- Leaflet JavaScript -->
+    <!-- Leaflet & Routing JS Libraries -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.js"></script>
 
     <script>
-        // 1. Initialize the map
+        // 1. Initialize Map with minimal Apple-esque CartoDB Voyager/Positron or Dark Matter style
         var map = L.map('map', {
-            zoomControl: false
+            zoomControl: false,
+            attributionControl: false
         }).setView([6.5244, 3.3792], 13);
 
-        L.control.zoom({ position: 'topright' }).addTo(map);
+        // Position zoom control clean on the bottom right
+        L.control.zoom({ position: 'bottomright' }).addTo(map);
 
-        // 2. Add CartoDB Dark Matter map skin
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+        // Apple Maps Dark Mode Tile Skin (CartoDB Dark)
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
             maxZoom: 19,
-            attribution: '&copy; OpenStreetMap & CARTO',
             subdomains: 'abcd'
         }).addTo(map);
 
-        // 3. Add marker
-        var targetLatLng = [6.5244, 3.3792];
-        var marker = L.marker(targetLatLng).addTo(map);
-        marker.bindPopup("<b>HQ Destination</b>").openPopup();
+        // 2. Global variables for routing & profile configuration
+        let currentMode = 'driving'; // OSRM profile: driving, foot
+        let routingControl = null;
+        
+        // Default points: Start (User mock location) & Destination
+        let startPoint = L.latLng(6.5244, 3.3792); 
+        let endPoint = L.latLng(6.4281, 3.4219); // Eko Atlantic coordinates example
 
-        // 4. Text-to-Speech Engine (The Woman Voice feature)
-        function speakDirections(textToSpeak) {
+        // 3. Handle Travel Mode Switcher
+        function setTravelMode(mode, btnElement) {
+            document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+            btnElement.classList.add('active');
+
+            if (mode === 'car') {
+                currentMode = 'driving';
+            } else if (mode === 'foot') {
+                currentMode = 'foot';
+            } else if (mode === 'bus') {
+                currentMode = 'driving'; // OSRM standard public profiles map bus roughly to car/transit networks
+                speakText("Transit routing mode enabled using major roads.");
+            }
+
+            if (routingControl) {
+                startRouteNavigation(); // Recalculate instantly on mode switch
+            }
+        }
+
+        // 4. Voice Engine (The Woman Voice Guidance)
+        function speakText(message) {
             if ('speechSynthesis' in window) {
-                // Cancel any ongoing speech so they don't stack up
                 window.speechSynthesis.cancel();
+                let utterance = new SpeechSynthesisUtterance(message);
+                utterance.rate = 1.0;
+                utterance.pitch = 1.05;
 
-                var utterance = new SpeechSynthesisUtterance(textToSpeak);
-                utterance.rate = 1.0; // Normal speed
-                utterance.pitch = 1.1; // Slightly higher pitch for clear voice
-
-                // Try to find a natural female voice available on your system/device
-                var voices = window.speechSynthesis.getVoices();
-                for (var i = 0; i < voices.length; i++) {
-                    if (voices[i].name.includes('Female') || voices[i].name.includes('Zira') || voices[i].name.includes('Samantha') || voices[i].name.includes('Victoria')) {
-                        utterance.voice = voices[i];
+                let voices = window.speechSynthesis.getVoices();
+                for (let v of voices) {
+                    if (v.name.includes('Female') || v.name.includes('Zira') || v.name.includes('Samantha') || v.name.includes('Victoria')) {
+                        utterance.voice = v;
                         break;
                     }
                 }
-
+                window.speechSynthesis.updateVoices && window.speechSynthesis.updateVoices();
                 window.speechSynthesis.speak(utterance);
-            } else {
-                console.log("Text-to-speech not supported in this browser.");
             }
         }
 
-        // Fix for Chrome's voice loading quirk
         if ('speechSynthesis' in window) {
-            window.speechSynthesis.onvoiceschanged = function() {
-                window.speechSynthesis.getVoices();
-            };
+            window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
         }
 
-        // 5. Button Actions that combine map movement + spoken voice cues
-        function triggerNavigation(actionType) {
-            if (actionType === 'nav') {
-                map.flyTo(targetLatLng, 16, { duration: 1.5 });
-                marker.openPopup();
-                speakDirections("Route loaded. Head north on the main avenue, then prepare to turn right.");
-            } else if (actionType === 'uturn') {
-                // Shift map slightly to simulate movement context
-                map.panBy([50, -50], { animate: true });
-                speakDirections("In 200 meters, make a U-turn when safe.");
+        // 5. Calculate Real Route and Setup Turn-by-Turn Instructions
+        function startRouteNavigation() {
+            document.getElementById('hudCard').style.display = 'flex';
+
+            // Remove existing routing path if it exists
+            if (routingControl) {
+                map.removeControl(routingControl);
             }
+
+            // Create Leaflet Routing Control using OSRM public backend
+            routingControl = L.Routing.control({
+                waypoints: [startPoint, endPoint],
+                router: L.Routing.osrmv1({
+                    serviceUrl: 'https://router.project-osrm.org/route/v1',
+                    profile: currentMode
+                }),
+                lineOptions: {
+                    styles: [{ color: '#0a84ff', opacity: 0.85, weight: 6 }] // Apple Maps Blue route stroke
+                },
+                show: false,
+                addWaypoints: false,
+                fitSelectedRoutes: true,
+                createMarker: function(i, wp, nWps) {
+                    // Style custom glowing start/end pins
+                    let pinColor = (i === 0) ? '#30d158' : '#ff453a'; // Green for start, Red for destination
+                    return L.circleMarker(wp.latLng, {
+                        radius: 8,
+                        color: '#fff',
+                        weight: 2,
+                        fillColor: pinColor,
+                        fillOpacity: 1
+                    });
+                }
+            }).addTo(map);
+
+            // Listen to route calculations to trigger real turn instructions via voice
+            routingControl.on('routesfound', function(e) {
+                let routes = e.routes;
+                let instructions = routes[0].instructions;
+                
+                if (instructions && instructions.length > 0) {
+                    let firstStep = instructions[0];
+                    let textInstruction = firstStep.text;
+                    let distanceText = firstStep.distance > 1000 ? (firstStep.distance / 1000).toFixed(1) + ' kilometers' : firstStep.distance + ' meters';
+
+                    // Update HUD Display
+                    document.getElementById('hudDistance').innerText = `In ${distanceText}`;
+                    document.getElementById('hudInstruction').innerText = textInstruction;
+
+                    // Trigger the Woman Voice to read instruction aloud
+                    speakText(`Route calculated. Starting navigation. In ${distanceText}, ${textInstruction}`);
+                }
+            });
         }
     </script>
-
 </body>
 </html>
