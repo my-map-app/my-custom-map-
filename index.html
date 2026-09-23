@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Custom Map</title>
+    
+    <!-- 1. Include Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    
+    <!-- 2. Your custom styles -->
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+        }
+        #map {
+            width: 100vw;
+            height: 100vh; /* Fullscreen map */
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 3. Map container -->
+    <div id="map"></div>
+
+    <!-- 4. Include Leaflet JavaScript -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <!-- 5. Initialize the map -->
+    <script>
+        // Set center coordinates and zoom level [latitude, longitude], zoom
+        var map = L.map('map').setView([6.5244, 3.3792], 13); // Default centered on Lagos, Nigeria
+
+        // Add tile layer (the map skin/graphics from OpenStreetMap)
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '© OpenStreetMap contributors'
+        }).addTo(map);
+
+        // Add a marker with a popup
+        var marker = L.marker([6.5244, 3.3792]).addTo(map);
+        marker.bindPopup("<b>Hello!</b><br>This is my custom map marker.").openPopup();
+    </script>
+
+</body>
+</html>
