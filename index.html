@@ -3,12 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>My Map </title>
+    <title>My free Map</title>
     
     <!-- Leaflet CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <!-- Leaflet Routing Machine CSS -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.css" />
     
     <!-- SF Pro / Inter Typography -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -52,7 +50,7 @@
         }
 
         .glass-card {
-            background: rgba(28, 28, 30, 0.8);
+            background: rgba(28, 28, 30, 0.85);
             backdrop-filter: blur(25px);
             -webkit-backdrop-filter: blur(25px);
             border: 1px solid rgba(255, 255, 255, 0.12);
@@ -69,7 +67,6 @@
             color: #fff;
         }
 
-        /* Input Group Fields */
         .input-group {
             display: flex;
             flex-direction: column;
@@ -100,7 +97,23 @@
             color: #8e8e93;
         }
 
-        /* Transport Mode Segmented Control */
+        .gps-btn {
+            background: rgba(10, 132, 255, 0.2);
+            border: 1px solid #0a84ff;
+            color: #38bdf8;
+            padding: 6px 10px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: background 0.2s;
+        }
+
+        .gps-btn:hover {
+            background: rgba(10, 132, 255, 0.4);
+        }
+
         .mode-selector {
             display: flex;
             background: rgba(0, 0, 0, 0.4);
@@ -176,10 +189,6 @@
             color: #fff;
         }
 
-        .leaflet-routing-container {
-            display: none !important;
-        }
-
         @media (max-width: 600px) {
             .floating-ui {
                 width: calc(100% - 32px);
@@ -196,42 +205,39 @@
     <!-- Apple Maps Glass UI Overlay -->
     <div class="floating-ui">
         <div class="glass-card">
-            <h2>Plan Your Route</h2>
+            <h2>Live Navigation</h2>
             
             <div class="input-group">
-                <!-- Visitor Origin Address Input -->
                 <div class="input-box">
                     <span>🟢</span>
-                    <input type="text" id="startAddressInput" placeholder="Enter starting address (e.g. Ikeja, Lagos)" value="Ikeja, Lagos">
+                    <input type="text" id="startAddressInput" placeholder="Your starting address or GPS">
+                    <button class="gps-btn" onclick="requestUserLocation()">📍 Use GPS</button>
                 </div>
-                <!-- Visitor Destination Address Input -->
                 <div class="input-box">
                     <span>🏁</span>
-                    <input type="text" id="endAddressInput" placeholder="Enter destination (e.g. Lekki, Lagos)" value="Lekki Phase 1, Lagos">
+                    <input type="text" id="endAddressInput" placeholder="Enter destination address">
                 </div>
             </div>
 
             <div class="mode-selector">
                 <button class="mode-btn active" onclick="setTravelMode('driving', this)">🚗 Drive</button>
                 <button class="mode-btn" onclick="setTravelMode('foot', this)">🚶 Walk</button>
-                <button class="mode-btn" onclick="setTravelMode('transit', this)">🚌 Transit</button>
             </div>
 
-            <button class="nav-go-btn" onclick="processUserAddresses()">Route & Speak</button>
+            <button class="nav-go-btn" onclick="calculateRoute()">Route & Speak</button>
         </div>
 
         <div class="hud-card" id="hudCard">
             <div class="hud-icon">🧭</div>
             <div class="hud-text">
-                <h4 id="hudDistance">Calculating...</h4>
-                <p id="hudInstruction">Preparing directions...</p>
+                <h4 id="hudDistance">Ready</h4>
+                <p id="hudInstruction">Enter your addresses to begin</p>
             </div>
         </div>
     </div>
 
-    <!-- Leaflet & Routing JS Libraries -->
+    <!-- Leaflet JS Library -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.js"></script>
 
     <script>
         // 1. Initialize Map
@@ -248,7 +254,9 @@
         }).addTo(map);
 
         let currentProfile = 'driving';
-        let routingControl = null;
+        let verifiedStartLatLng = null;
+        let currentRouteLayer = null;
+        let currentMarkers = [];
 
         function setTravelMode(mode, btnElement) {
             document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
@@ -256,7 +264,7 @@
             currentProfile = mode;
         }
 
-        // 2. Female Voice Engine that reads out the custom addresses
+        // 2. Female Voice Engine
         function speakText(message) {
             if ('speechSynthesis' in window) {
                 window.speechSynthesis.cancel();
@@ -279,7 +287,50 @@
             window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
         }
 
-        // 3. Convert text address to Lat/Lng coordinates using Nominatim API (Free OpenStreetMap Geocoder)
+        // 3. Request Live GPS Geolocation
+        function requestUserLocation() {
+            if (!navigator.geolocation) {
+                alert("Geolocation is not supported by your browser");
+                return;
+            }
+
+            document.getElementById('hudCard').style.display = 'flex';
+            document.getElementById('hudDistance').innerText = "Requesting permission...";
+            document.getElementById('hudInstruction').innerText = "Please allow location access on your device.";
+            speakText("Please allow location access on your device.");
+
+            navigator.geolocation.getCurrentPosition(
+                async function(position) {
+                    let lat = position.coords.latitude;
+                    let lon = position.coords.longitude;
+                    verifiedStartLatLng = L.latLng(lat, lon);
+
+                    map.setView(verifiedStartLatLng, 15);
+
+                    let reverseUrl = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`;
+                    try {
+                        let res = await fetch(reverseUrl);
+                        let data = await res.json();
+                        let addressName = data.display_name ? data.display_name.split(',')[0] + ', ' + (data.display_name.split(',')[1] || '') : "Current Location";
+                        
+                        document.getElementById('startAddressInput').value = addressName;
+                        document.getElementById('hudDistance').innerText = "Location acquired";
+                        document.getElementById('hudInstruction').innerText = "Ready to route from your position.";
+                        speakText("Location acquired successfully. Enter your destination.");
+                    } catch (err) {
+                        document.getElementById('startAddressInput').value = "My GPS Location";
+                        speakText("Location acquired.");
+                    }
+                },
+                function(error) {
+                    alert("Location access denied or unavailable. Type your starting address manually.");
+                    document.getElementById('hudCard').style.display = 'none';
+                },
+                { enableHighAccuracy: true }
+            );
+        }
+
+        // Geocode text query
         async function geocodeAddress(addressQuery) {
             let url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(addressQuery)}`;
             try {
@@ -288,81 +339,94 @@
                 if (data && data.length > 0) {
                     return L.latLng(parseFloat(data[0].lat), parseFloat(data[0].lon));
                 } else {
-                    alert(`Could not find address: "${addressQuery}". Please try a more specific location.`);
+                    alert(`Could not find address: "${addressQuery}"`);
                     return null;
                 }
             } catch (error) {
-                console.error("Geocoding error:", error);
                 return null;
             }
         }
 
-        // 4. Process custom visitor inputs, fetch map pins, speak visitor addresses, and route
-        async function processUserAddresses() {
+        // 4. Calculate Route using OpenStreetMap API directly (No plugin, No API Keys)
+        async function calculateRoute() {
             let startText = document.getElementById('startAddressInput').value;
             let endText = document.getElementById('endAddressInput').value;
 
-            if (!startText || !endText) {
-                alert("Please fill in both starting and destination addresses!");
+            if (!endText) {
+                alert("Please enter your destination address!");
                 return;
             }
 
             document.getElementById('hudCard').style.display = 'flex';
-            document.getElementById('hudDistance').innerText = "Locating addresses...";
-            document.getElementById('hudInstruction').innerText = "Please wait while we search...";
+            document.getElementById('hudDistance').innerText = "Calculating...";
+            document.getElementById('hudInstruction').innerText = "Finding the best path...";
 
-            // Speak back the addresses the visitor entered
-            speakText(`Routing from ${startText} to ${endText}. Finding your path now.`);
-
-            // Fetch coordinates for both inputs simultaneously
-            let startLatLng = await geocodeAddress(startText);
-            let endLatLng = await geocodeAddress(endText);
-
-            if (!startLatLng || !endLatLng) return;
-
-            // Remove existing path if present
-            if (routingControl) {
-                map.removeControl(routingControl);
+            let startLatLng = verifiedStartLatLng;
+            if (!startLatLng) {
+                if (!startText) {
+                    alert("Please provide a starting address or click 'Use GPS'");
+                    return;
+                }
+                startLatLng = await geocodeAddress(startText);
             }
 
-            // Draw route between custom visitor addresses
-            routingControl = L.Routing.control({
-                waypoints: [startLatLng, endLatLng],
-                router: L.Routing.osrmv1({
-                    serviceUrl: 'https://router.project-osrm.org/route/v1',
-                    profile: currentProfile
-                }),
-                lineOptions: {
-                    styles: [{ color: '#0a84ff', opacity: 0.85, weight: 6 }]
-                },
-                show: false,
-                addWaypoints: false,
-                fitSelectedRoutes: true,
-                createMarker: function(i, wp, nWps) {
-                    let pinColor = (i === 0) ? '#30d158' : '#ff453a';
-                    let label = (i === 0) ? `Start: ${startText}` : `Destination: ${endText}`;
-                    return L.circleMarker(wp.latLng, {
-                        radius: 9,
-                        color: '#fff',
-                        weight: 2,
-                        fillColor: pinColor,
-                        fillOpacity: 1
-                    }).bindPopup(label);
+            let endLatLng = await geocodeAddress(endText);
+            if (!startLatLng || !endLatLng) return;
+
+            speakText(`Routing from ${startText || 'your location'} to ${endText}. Finding your path.`);
+
+            // Clear old routes and markers
+            if (currentRouteLayer) map.removeLayer(currentRouteLayer);
+            currentMarkers.forEach(m => map.removeLayer(m));
+            currentMarkers = [];
+
+            // Fetch route from public OSRM server
+            let osrmUrl = `https://router.project-osrm.org/route/v1/${currentProfile}/${startLatLng.lng},${startLatLng.lat};${endLatLng.lng},${endLatLng.lat}?overview=full&geometries=geojson&steps=true`;
+
+            try {
+                let response = await fetch(osrmUrl);
+                let data = await response.json();
+
+                if (data.code !== 'Ok' || !data.routes || data.routes.length === 0) {
+                    alert("Could not calculate a route between these locations.");
+                    return;
                 }
-            }).addTo(map);
 
-            routingControl.on('routesfound', function(e) {
-                let firstStep = e.routes[0].instructions[0];
-                let textInstruction = firstStep.text;
-                let distanceText = firstStep.distance > 1000 ? (firstStep.distance / 1000).toFixed(1) + ' km' : firstStep.distance + ' meters';
+                let route = data.routes[0];
+                let coords = route.geometry.coordinates.map(c => [c[1], c[0]]); // Flip to Leaflet format [lat, lng]
 
-                document.getElementById('hudDistance').innerText = `In ${distanceText}`;
-                document.getElementById('hudInstruction').innerText = textInstruction;
-                
-                // Speak the first immediate turn instruction
-                speakText(`In ${distanceText}, ${textInstruction}`);
-            });
+                // Draw gorgeous Apple-style blue line on map
+                currentRouteLayer = L.polyline(coords, {
+                    color: '#0a84ff',
+                    weight: 6,
+                    opacity: 0.9,
+                    lineCap: 'round'
+                }).addTo(map);
+
+                map.fitBounds(currentRouteLayer.getBounds(), { padding: [50, 50] });
+
+                // Add Start and End Pins
+                let startMarker = L.circleMarker(startLatLng, { radius: 9, color: '#fff', weight: 2, fillColor: '#30d158', fillOpacity: 1 }).addTo(map).bindPopup("Start: " + (startText || "GPS Location"));
+                let endMarker = L.circleMarker(endLatLng, { radius: 9, color: '#fff', weight: 2, fillColor: '#ff453a', fillOpacity: 1 }).addTo(map).bindPopup("Destination: " + endText);
+                currentMarkers.push(startMarker, endMarker);
+
+                // Read first instruction via voice
+                if (route.legs && route.legs[0].steps && route.legs[0].steps.length > 0) {
+                    let firstStep = route.legs[0].steps[0];
+                    let distanceText = firstStep.distance > 1000 ? (firstStep.distance / 1000).toFixed(1) + ' km' : Math.round(firstStep.distance) + ' meters';
+                    
+                    document.getElementById('hudDistance').innerText = `In ${distanceText}`;
+                    document.getElementById('hudInstruction').innerText = firstStep.maneuver.instruction || "Proceed on route";
+
+                    speakText(`In ${distanceText}, ${firstStep.maneuver.instruction || "head towards your destination"}`);
+                }
+
+            } catch (err) {
+                console.error(err);
+                alert("Network error while calculating route.");
+            }
         }
     </script>
 </body>
 </html>
+
