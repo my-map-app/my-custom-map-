@@ -3,46 +3,191 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>My Custom Map</title>
+    <title>Pro Interactive Map Dashboard</title>
     
-    <!-- 1. Include Leaflet CSS -->
+    <!-- Leaflet CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     
-    <!-- 2. Your custom styles -->
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
     <style>
-        body {
+        * {
+            box-sizing: border-box;
             margin: 0;
             padding: 0;
-            font-family: Arial, sans-serif;
         }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0f172a; /* Sleek dark theme background */
+            color: #f8fafc;
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* Sidebar UI */
+        .sidebar {
+            width: 380px;
+            background: #1e293b;
+            border-right: 1px solid #334155;
+            display: flex;
+            flex-direction: column;
+            padding: 24px;
+            z-index: 1000;
+            box-shadow: 4px 0 24px rgba(0,0,0,0.3);
+        }
+
+        .sidebar h1 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 8px;
+            color: #38bdf8;
+        }
+
+        .sidebar p {
+            color: #94a3b8;
+            font-size: 0.9rem;
+            margin-bottom: 24px;
+        }
+
+        /* Direction Card with Image */
+        .direction-card {
+            background: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .direction-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .direction-img {
+            width: 60px;
+            height: 60px;
+            border-radius: 8px;
+            object-fit: cover;
+            border: 1px solid #38bdf8;
+        }
+
+        .direction-info h3 {
+            font-size: 1rem;
+            font-weight: 600;
+            color: #f8fafc;
+        }
+
+        .direction-info span {
+            font-size: 0.8rem;
+            color: #38bdf8;
+        }
+
+        .action-btn {
+            background: #38bdf8;
+            color: #0f172a;
+            border: none;
+            padding: 10px 16px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+            width: 100%;
+        }
+
+        .action-btn:hover {
+            background: #0ea5e9;
+        }
+
+        /* Map Container */
         #map {
-            width: 100vw;
-            height: 100vh; /* Fullscreen map */
+            flex-grow: 1;
+            height: 100%;
+            background: #0f172a;
+        }
+
+        /* Responsive layout for mobile */
+        @media (max-width: 768px) {
+            body {
+                flex-direction: column;
+            }
+            .sidebar {
+                width: 100%;
+                height: 40vh;
+                overflow-y: auto;
+            }
+            #map {
+                height: 60vh;
+            }
         }
     </style>
 </head>
 <body>
 
-    <!-- 3. Map container -->
+    <!-- Sidebar Control Panel -->
+    <div class="sidebar">
+        <h1>GeoNav Pro</h1>
+        <p>Interactive client-side mapping dashboard built with HTML, CSS, and JS.</p>
+
+        <!-- Direction Box with a mini picture -->
+        <div class="direction-card">
+            <div class="direction-header">
+                <!-- You can replace this image URL with any picture you prefer -->
+                <img src="https://images.unsplash.com/photo-1526778548025-fa2f459cd5c1?w=150" alt="Direction icon" class="direction-img">
+                <div class="direction-info">
+                    <h3>HQ Destination</h3>
+                    <span>Tap to fly & view route</span>
+                </div>
+            </div>
+            <button class="action-btn" onclick="focusOnDestination()">Show on Map</button>
+        </div>
+
+        <div style="margin-top: auto; font-size: 0.75rem; color: #64748b; text-align: center;">
+            Powered by Leaflet & OpenStreetMap
+        </div>
+    </div>
+
+    <!-- The Map Element -->
     <div id="map"></div>
 
-    <!-- 4. Include Leaflet JavaScript -->
+    <!-- Leaflet JavaScript -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
-    <!-- 5. Initialize the map -->
     <script>
-        // Set center coordinates and zoom level [latitude, longitude], zoom
-        var map = L.map('map').setView([6.5244, 3.3792], 13); // Default centered on Lagos, Nigeria
+        // 1. Initialize the map (Centered coordinates: Lagos [6.5244, 3.3792])
+        var map = L.map('map', {
+            zoomControl: false // We can reposition zoom control if needed
+        }).setView([6.5244, 3.3792], 13);
 
-        // Add tile layer (the map skin/graphics from OpenStreetMap)
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        // Add zoom control to the top-right corner
+        L.control.zoom({ position: 'topright' }).addTo(map);
+
+        // 2. Add custom styled tile layer (Using CartoDB Dark Matter for that pro dark-mode aesthetic)
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
             maxZoom: 19,
-            attribution: '© OpenStreetMap contributors'
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+            subdomains: 'abcd'
         }).addTo(map);
 
-        // Add a marker with a popup
-        var marker = L.marker([6.5244, 3.3792]).addTo(map);
-        marker.bindPopup("<b>Hello!</b><br>This is my custom map marker.").openPopup();
+        // 3. Add a destination marker with custom popup
+        var targetLatLng = [6.5244, 3.3792];
+        var marker = L.marker(targetLatLng).addTo(map);
+        marker.bindPopup("<b>HQ Destination</b><br>You have arrived at the target location.").openPopup();
+
+        // 4. Function triggered when clicking the sidebar button
+        function focusOnDestination() {
+            // Smoothly animate/fly the map to the location with a closer zoom
+            map.flyTo(targetLatLng, 16, {
+                duration: 1.5 // Animation duration in seconds
+            });
+            marker.openPopup();
+        }
     </script>
 
 </body>
